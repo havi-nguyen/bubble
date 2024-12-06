@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -21,13 +22,6 @@ const bubbleMaterial = new THREE.MeshBasicMaterial({
 });
 const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
 scene.add(bubble);
-
-// Cube inside the bubble
-const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color for better visibility
-const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-scene.add(cube); // Add cube to the scene
-cube.position.set(0, 0, 0); // Position cube at the center of the bubble
 
 // Initial Camera Position
 let radius = 5; // Distance from the bubble
@@ -149,6 +143,89 @@ const materialArray = skyboxTextures.map(
 const skyboxGeo = new THREE.BoxGeometry(50, 50, 50); // Adjust size as needed
 const skybox = new THREE.Mesh(skyboxGeo, materialArray);
 scene.add(skybox);
+
+// // Cube inside the bubble
+// const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
+// const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color for better visibility
+// const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
+// scene.add(cube); // Add cube to the scene
+// cube.position.set(0, 0, 0); // Position cube at the center of the bubble
+// Hemisphere (flipped to cover the bottom half)
+const terrainRadius = 0.8; // Radius of the hemisphere
+const terrainSegments = 64; // Segments for smoothness
+const hemisphereGeometry = new THREE.SphereGeometry(
+    terrainRadius, // Radius
+    terrainSegments, // Width segments
+    terrainSegments, // Height segments
+    0, // phiStart: Start angle horizontally (unchanged)
+    Math.PI * 2, // phiLength: Full horizontal circle
+    Math.PI / 2, // thetaStart: Start at the equator
+    Math.PI / 2 // thetaLength: Covers only the bottom hemisphere
+);
+
+// Default material for the hemisphere with a sand color
+const hemisphereMaterial = new THREE.MeshPhongMaterial({
+    color: 0xD2B48C, // Tan/sand color
+    shininess: 20, // Adds a subtle shine
+    flatShading: false, // Ensures smooth shading
+});
+
+const hemisphere = new THREE.Mesh(hemisphereGeometry, hemisphereMaterial);
+scene.add(hemisphere);
+
+// Disc geometry for the flat cut region
+const discRadius = terrainRadius; // Match the radius of the hemisphere
+const discSegments = terrainSegments;
+const cutRegionGeometry = new THREE.CircleGeometry(
+    discRadius, // Radius of the disc
+    discSegments // Segments for smoothness
+);
+
+// Rotate the disc to align with the flat cut of the hemisphere
+cutRegionGeometry.rotateX(-Math.PI / 2); // Align the disc to face upwards
+
+// Material for the disc with a light beige color
+const cutRegionMaterial = new THREE.MeshPhongMaterial({
+    color: 0xF5DEB3, // Wheat color (light beige)
+    shininess: 20, // Subtle shine
+    side: THREE.DoubleSide, // Ensure visibility from both sides
+});
+
+const cutRegion = new THREE.Mesh(cutRegionGeometry, cutRegionMaterial);
+scene.add(cutRegion);
+
+// Position the disc exactly at the equator of the hemisphere
+cutRegion.position.set(0, -terrainRadius/20, 0); // Set position to the cut (equator) of the hemisphere
+
+// Modify the disc geometry to create terrain-like bumps using Perlin noise
+const perlin = new ImprovedNoise();
+const scale = 4; // Scale for Perlin noise
+const amplitude = 0.1; // Maximum height of terrain bumps
+
+const positions = cutRegionGeometry.attributes.position.array;
+for (let i = 0; i < positions.length; i += 3) {
+  const x = positions[i];
+  const z = positions[i + 2];
+
+  // Calculate noise based on x and z
+  const noise = perlin.noise(x * scale, z * scale, 0) * amplitude;
+
+  // Update the y (height) position
+  positions[i + 1] = noise; // Modify the y-coordinate (height)
+}
+
+// Update normals for correct shading
+cutRegionGeometry.computeVertexNormals();
+cutRegionGeometry.attributes.position.needsUpdate = true;
+
+
+const light = new THREE.AmbientLight(0x404040, 1); // Ambient light with soft white color
+scene.add(light);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // White directional light
+directionalLight.position.set(1, 1, 1).normalize(); // Directional light from above
+scene.add(directionalLight);
+
 
 // Start animation
 animate();
