@@ -223,7 +223,7 @@ const light = new THREE.AmbientLight(0x404040, 1); // Ambient light with soft wh
 scene.add(light);
 
 const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // White directional light
-directionalLight.position.set(1, 1, 1).normalize(); // Directional light from above
+directionalLight.position.set(0.3, 3, 1).normalize(); // Directional light from above
 scene.add(directionalLight);
 
 
