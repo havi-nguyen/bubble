@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
-import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
+import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -306,6 +306,9 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // White direc
 directionalLight.position.set(0.3, 3, 1).normalize(); // Directional light from above
 scene.add(directionalLight);
 
+const ambientLight = new THREE.AmbientLight(0xffffff, 2); // Brighter ambient light
+scene.add(ambientLight);
+
 // Bubbles on Mouse Click and Drag
 let bubbleGenerationCounter = 0; // Counter to control frequency
 const activeParticleSystems = [];
@@ -558,28 +561,28 @@ const textureLoader = new THREE.TextureLoader(); // Texture loader for loading t
 
 // Preload all textures based on indices provided
 const textures = [
-  textureLoader.load('./textures/body_baseColor.png'), // index 0
-  textureLoader.load('./textures/body_metallicRoughness.png'), // index 1
-  textureLoader.load('./textures/body_normal.png'), // index 2
+  textureLoader.load("./textures/body_baseColor.png"), // index 0
+  textureLoader.load("./textures/body_metallicRoughness.png"), // index 1
+  textureLoader.load("./textures/body_normal.png"), // index 2
 
-  textureLoader.load('./textures/Fin_down_baseColor.png'), // index 3
-  textureLoader.load('./textures/Fin_down_metallicRoughness.png'), // index 4
-  textureLoader.load('./textures/Fin_down_normal.png'), // index 5
+  textureLoader.load("./textures/Fin_down_baseColor.png"), // index 3
+  textureLoader.load("./textures/Fin_down_metallicRoughness.png"), // index 4
+  textureLoader.load("./textures/Fin_down_normal.png"), // index 5
 
-  textureLoader.load('./textures/fin_back_baseColor.png'), // index 6
-  textureLoader.load('./textures/fin_back_metallicRoughness.png'), // index 7
-  textureLoader.load('./textures/fin_back_nomral.png'), // index 8
+  textureLoader.load("./textures/fin_back_baseColor.png"), // index 6
+  textureLoader.load("./textures/fin_back_metallicRoughness.png"), // index 7
+  textureLoader.load("./textures/fin_back_nomral.png"), // index 8
 
-  textureLoader.load('./textures/fin_top_baseColor.png'), // index 9
-  textureLoader.load('./textures/fin_top_metallicRoughness.png'), // index 10
-  textureLoader.load('./textures/fin_top_normal.png'), // index 11
+  textureLoader.load("./textures/fin_top_baseColor.png"), // index 9
+  textureLoader.load("./textures/fin_top_metallicRoughness.png"), // index 10
+  textureLoader.load("./textures/fin_top_normal.png"), // index 11
 
-  textureLoader.load('./textures/eyes_baseColor.png'), // index 12
-  textureLoader.load('./textures/eyes_metallicRoughness.png'), // index 13
+  textureLoader.load("./textures/eyes_baseColor.png"), // index 12
+  textureLoader.load("./textures/eyes_metallicRoughness.png"), // index 13
 ];
 
 loader.load(
-  './red_betta_fish/scene.gltf',
+  "./red_betta_fish/scene.gltf",
   (gltf) => {
     const fish = gltf.scene;
 
@@ -593,42 +596,20 @@ loader.load(
     // Traverse and apply textures based on the materials' names
     fish.traverse((node) => {
       if (node.isMesh) {
-        const material = new THREE.MeshStandardMaterial();
+        const material = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(0xffa500), // Set the color to orange
+          metalness: 0.2, // Adjust metalness
+          roughness: 0.8, // Adjust roughness
+        });
 
-        // Check the mesh name and apply the appropriate material settings
-        if (node.name === 'body') {
-          material.map = textures[0]; // baseColorTexture
-          material.normalMap = textures[2]; // normalTexture
-          material.metalnessMap = textures[1]; // metallicRoughnessTexture
-          material.roughnessMap = textures[1]; // metallicRoughnessTexture
-        } else if (node.name === 'Fin_down') {
-          material.map = textures[3]; // baseColorTexture
-          material.normalMap = textures[5]; // normalTexture
-          material.metalnessMap = textures[4]; // metallicRoughnessTexture
-          material.roughnessMap = textures[4]; // metallicRoughnessTexture
-          material.alphaMode = 'BLEND';
-        } else if (node.name === 'fin_back') {
-          material.map = textures[6]; // baseColorTexture
-          material.normalMap = textures[8]; // normalTexture
-          material.metalnessMap = textures[7]; // metallicRoughnessTexture
-          material.roughnessMap = textures[7]; // metallicRoughnessTexture
-        } else if (node.name === 'fin_top') {
-          material.map = textures[9]; // baseColorTexture
-          material.normalMap = textures[11]; // normalTexture
-          material.metalnessMap = textures[10]; // metallicRoughnessTexture
-          material.roughnessMap = textures[10]; // metallicRoughnessTexture
-        } else if (node.name === 'eyes') {
-          material.map = textures[12]; // baseColorTexture
-          material.metalnessMap = textures[13]; // metallicRoughnessTexture
-          material.roughnessMap = textures[13]; // roughnessTexture
+        // Optional: Remove the texture map to prioritize the color
+        if (node.name === "body" || node.name.startsWith("Fin")) {
+          material.map = null; // Ensure no base color texture conflicts with the color
+        } else if (node.name === "eyes") {
+          material.color = new THREE.Color(0x000000); // Keep the eyes black
         }
 
-        // Apply double-sided property if needed
-        if (node.name === 'Fin_down' || node.name === 'fin_top') {
-          material.side = THREE.DoubleSide;
-        }
-
-        // Assign the material to the mesh
+        material.side = THREE.DoubleSide; // Ensure visibility from both sides
         node.material = material;
       }
     });
@@ -649,13 +630,17 @@ loader.load(
 
     // Initial fish position and direction
     let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
-    let fishDirection = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(); // Random initial direction
+    let fishDirection = new THREE.Vector3(
+      Math.random(),
+      Math.random(),
+      Math.random()
+    ).normalize(); // Random initial direction
 
     // Randomized fish speed within a range
     function getRandomSpeed(min, max) {
       return Math.random() * (max - min) + min; // Random speed between min and max
     }
-    let fishSpeed = getRandomSpeed(0.0001, 0.0020); // Slower speed between 0.001 and 0.0020
+    let fishSpeed = getRandomSpeed(0.0001, 0.002); // Slower speed between 0.001 and 0.0020
 
     // Time tracking for direction changes
     let changeDirectionCounter = 0;
@@ -669,15 +654,13 @@ loader.load(
         // Reverse direction to prevent immediately leaving again
         fishDirection.reflect(position.clone().normalize());
       }
-    
+
       // Ensure the fish stays in the top hemisphere (y >= 0)
       if (position.y <= 0) {
-        position.y = 0;  // Prevent fish from going below the equator
-        fishDirection.y = Math.abs(fishDirection.y);  // Adjust direction to stay upwards
+        position.y = 0; // Prevent fish from going below the equator
+        fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to stay upwards
       }
     }
-    
-    
 
     // Ensure the fish stays in the top hemisphere (y >= 0)
     function keepInTopHemisphere(position) {
@@ -691,12 +674,14 @@ loader.load(
     function updateFish() {
       // Randomize speed slightly every few frames
       if (changeDirectionCounter++ >= changeDirectionInterval) {
-        fishSpeed = getRandomSpeed(0.001, 0.0020); // Adjust speed every few frames
+        fishSpeed = getRandomSpeed(0.001, 0.002); // Adjust speed every few frames
         changeDirectionCounter = 0;
       }
 
       // Attempt to move the fish
-      const newPosition = fishPosition.clone().add(fishDirection.clone().multiplyScalar(fishSpeed));
+      const newPosition = fishPosition
+        .clone()
+        .add(fishDirection.clone().multiplyScalar(fishSpeed));
 
       // Ensure movement stays within the 0.9-radius sphere
       keepInsideSphere(newPosition, 0.9, fishRadiusBuffer);
@@ -709,11 +694,13 @@ loader.load(
 
       // Randomly change direction every few frames
       if (changeDirectionCounter++ >= changeDirectionInterval) {
-        fishDirection.set(
-          Math.random() - 0.5, // Random X
-          Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
-          Math.random() - 0.5  // Random Z
-        ).normalize();
+        fishDirection
+          .set(
+            Math.random() - 0.5, // Random X
+            Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
+            Math.random() - 0.5 // Random Z
+          )
+          .normalize();
         changeDirectionCounter = 0;
       }
 
