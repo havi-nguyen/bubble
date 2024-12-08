@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { ImprovedNoise } from 'three/examples/jsm/math/ImprovedNoise.js';
+import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -109,8 +109,8 @@ function updateMovement() {
 // Animation loop
 function animate() {
   requestAnimationFrame(animate);
-
   updateMovement(); // Update camera position
+  updateParticles();
   renderer.render(scene, camera);
 }
 
@@ -154,21 +154,21 @@ scene.add(skybox);
 const terrainRadius = 0.9; // Radius of the hemisphere
 const terrainSegments = 64; // Segments for smoothness
 const hemisphereGeometry = new THREE.SphereGeometry(
-    terrainRadius, // Radius
-    terrainSegments, // Width segments
-    terrainSegments, // Height segments
-    0, // phiStart: Start angle horizontally (unchanged)
-    Math.PI * 2, // phiLength: Full horizontal circle
-    Math.PI / 2, // thetaStart: Start at the equator
-    Math.PI / 2 // thetaLength: Covers only the bottom hemisphere
+  terrainRadius, // Radius
+  terrainSegments, // Width segments
+  terrainSegments, // Height segments
+  0, // phiStart: Start angle horizontally (unchanged)
+  Math.PI * 2, // phiLength: Full horizontal circle
+  Math.PI / 2, // thetaStart: Start at the equator
+  Math.PI / 2 // thetaLength: Covers only the bottom hemisphere
 );
 
 // Disc geometry for the flat cut region
 const discRadius = terrainRadius; // Match the radius of the hemisphere
 const discSegments = terrainSegments;
 const cutRegionGeometry = new THREE.CircleGeometry(
-    discRadius, // Radius of the disc
-    discSegments // Segments for smoothness
+  discRadius, // Radius of the disc
+  discSegments // Segments for smoothness
 );
 
 // Rotate the disc to align with the flat cut of the hemisphere
@@ -176,9 +176,9 @@ cutRegionGeometry.rotateX(-Math.PI / 2); // Align the disc to face upwards
 
 // Material for the disc with a light beige color
 const cutRegionMaterial = new THREE.MeshPhongMaterial({
-    color: 0xF5DEB3, // Wheat color (light beige)
-    shininess: 20, // Subtle shine
-    side: THREE.DoubleSide, // Ensure visibility from both sides
+  color: 0xf5deb3, // Wheat color (light beige)
+  shininess: 20, // Subtle shine
+  side: THREE.DoubleSide, // Ensure visibility from both sides
 });
 
 const cutRegion = new THREE.Mesh(cutRegionGeometry, cutRegionMaterial);
@@ -186,7 +186,7 @@ scene.add(cutRegion);
 
 // Default material for the hemisphere with a sand color
 const hemisphereMaterial = new THREE.MeshPhongMaterial({
-  color: 0xD2B48C, // Tan/sand color
+  color: 0xd2b48c, // Tan/sand color
   shininess: 20, // Adds a subtle shine
   flatShading: false, // Ensures smooth shading
 });
@@ -195,7 +195,7 @@ const hemisphere = new THREE.Mesh(hemisphereGeometry, hemisphereMaterial);
 scene.add(hemisphere);
 
 // Position the disc exactly at the equator of the hemisphere
-cutRegion.position.set(0, -terrainRadius/20, 0); // Set position to the cut (equator) of the hemisphere
+cutRegion.position.set(0, -terrainRadius / 20, 0); // Set position to the cut (equator) of the hemisphere
 
 // Modify the disc geometry to create terrain-like bumps using Perlin noise
 const perlin = new ImprovedNoise();
@@ -218,7 +218,6 @@ for (let i = 0; i < positions.length; i += 3) {
 cutRegionGeometry.computeVertexNormals();
 cutRegionGeometry.attributes.position.needsUpdate = true;
 
-
 const light = new THREE.AmbientLight(0x404040, 1); // Ambient light with soft white color
 scene.add(light);
 
@@ -226,6 +225,122 @@ const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // White direc
 directionalLight.position.set(0.3, 3, 1).normalize(); // Directional light from above
 scene.add(directionalLight);
 
+// Bubbles on Mouse Click and Drag
+let bubbleGenerationCounter = 0; // Counter to control frequency
+const activeParticleSystems = [];
+let isMouseDown = false; // Track whether the mouse is pressed
+let mousePosition = new THREE.Vector3(); // Track mouse world position
+
+// Function to create a particle system
+function createParticleSystem(position) {
+  const particleCount = 50; // Number of particles
+  const particlesGeometry = new THREE.BufferGeometry();
+  const particlesMaterial = new THREE.PointsMaterial({
+    color: 0x87ceeb,
+    transparent: true,
+    opacity: 0.8,
+    size: 0.1,
+  });
+
+  // Create particle positions and velocities
+  const particlePositions = new Float32Array(particleCount * 3);
+  const particleVelocities = new Float32Array(particleCount * 3);
+
+  for (let i = 0; i < particleCount; i++) {
+    const index = i * 3;
+
+    const angle = Math.random() * Math.PI * 2; // Random angle for circular distribution
+    const radius = Math.random() * 0.5; // Random radius within a range
+
+    particlePositions[index] = position.x + Math.cos(angle) * radius;
+    particlePositions[index + 1] = position.y + Math.random() * 0.2; // Slight vertical offset
+    particlePositions[index + 2] = position.z + Math.sin(angle) * radius;
+
+    particleVelocities[index] = (Math.random() - 0.5) * 0.02; // x velocity
+    particleVelocities[index + 1] = 0.02 + Math.random() * 0.04; // y velocity
+    particleVelocities[index + 2] = (Math.random() - 0.5) * 0.02; // z velocity
+  }
+  particlesGeometry.setAttribute(
+    "position",
+    new THREE.Float32BufferAttribute(particlePositions, 3)
+  );
+
+  const particles = new THREE.Points(particlesGeometry, particlesMaterial);
+  scene.add(particles);
+
+  activeParticleSystems.push({ particles, particleVelocities, lifetime: 2 });
+}
+
+document.addEventListener("mousedown", (event) => {
+  isMouseDown = true;
+  updateMousePosition(event); // Update mouse position immediately on click
+});
+
+// Event listener for mousemove
+document.addEventListener("mousemove", (event) => {
+  if (isMouseDown) {
+    updateMousePosition(event); // Continuously update mouse position while dragging
+  }
+});
+
+// Event listener for mouseup
+document.addEventListener("mouseup", () => {
+  isMouseDown = false;
+});
+
+// Function to update mouse position
+function updateMousePosition(event) {
+  // Convert screen coordinates to normalized device coordinates (NDC)
+  const mouse = new THREE.Vector2();
+  mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+  mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+
+  // Convert NDC to world space
+  const raycaster = new THREE.Raycaster();
+  raycaster.setFromCamera(mouse, camera);
+
+  // Set the mouse position in the world space
+  const groundPlane = new THREE.Plane(new THREE.Vector3(0, 1, 0), 0); // Horizontal plane
+  const intersectionPoint = new THREE.Vector3();
+  if (raycaster.ray.intersectPlane(groundPlane, intersectionPoint)) {
+    mousePosition.copy(intersectionPoint);
+  }
+}
+
+// Update all active particle systems
+function updateParticles() {
+  // Generate particles if mouse is down
+  if (isMouseDown) {
+    bubbleGenerationCounter++;
+    if (bubbleGenerationCounter % 5 === 0) {
+      // Create a particle system every 5 frames
+      createParticleSystem(mousePosition);
+    }
+  } else {
+    bubbleGenerationCounter = 0; // Reset counter when mouse is not pressed
+  }
+
+  for (let i = activeParticleSystems.length - 1; i >= 0; i--) {
+    const system = activeParticleSystems[i];
+    const positions = system.particles.geometry.attributes.position.array;
+    const velocities = system.particleVelocities;
+
+    for (let j = 0; j < positions.length; j += 3) {
+      positions[j] += velocities[j]; // Update x
+      positions[j + 1] += velocities[j + 1]; // Update y (upward movement)
+      positions[j + 2] += velocities[j + 2]; // Update z
+    }
+
+    system.particles.geometry.attributes.position.needsUpdate = true;
+
+    // Decrease lifetime and remove the system if expired
+    system.lifetime -= 0.002;
+    if (system.lifetime <= 0) {
+      scene.remove(system.particles);
+      activeParticleSystems.splice(i, 1);
+    }
+  }
+}
 
 // Start animation
 animate();
