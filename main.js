@@ -13,15 +13,80 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+// // Bubble in the center
+// const bubbleGeometry = new THREE.SphereGeometry(1, 32, 32);
+// const bubbleMaterial = new THREE.MeshBasicMaterial({
+//   color: 0x87ceeb, // Light blue
+//   transparent: true,
+//   opacity: 0.6,
+// });
+// const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+// scene.add(bubble);
+
+// Refraction Environment Map
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const environmentMap = cubeTextureLoader.load([
+  "left.png", // Positive X
+  "right.png", // Negative X
+  "top.png", // Positive Y
+  "bottom.png", // Negative Y
+  "front.png", // Positive Z
+  "back.png", // Negative Z
+]);
+environmentMap.mapping = THREE.CubeRefractionMapping; // Enable refraction mapping
+
 // Bubble in the center
-const bubbleGeometry = new THREE.SphereGeometry(1, 32, 32);
-const bubbleMaterial = new THREE.MeshBasicMaterial({
-  color: 0x87ceeb, // Light blue
+const bubbleGeometry = new THREE.SphereGeometry(1, 64, 64); // Higher resolution for better visuals
+const bubbleMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    envMap: { value: environmentMap }, // Link the environment map
+    refractionRatio: { value: 0.98 }, // Refraction index
+    time: { value: 0.0 },
+    color: { value: new THREE.Color(0xffffff) }, // Bubble base color
+  },
+  vertexShader: `
+    varying vec3 vWorldPosition;
+    varying vec3 vNormal;
+
+    void main() {
+      vNormal = normalize(normalMatrix * normal); // Pass normals to fragment shader
+      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz; // World position of the vertex
+      gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPosition, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform samplerCube envMap;
+    uniform float refractionRatio;
+    uniform float time;
+    uniform vec3 color;
+    varying vec3 vWorldPosition;
+    varying vec3 vNormal;
+
+    void main() {
+      vec3 viewDir = normalize(vWorldPosition - cameraPosition); // View direction
+      vec3 refractedDir = refract(viewDir, vNormal, refractionRatio); // Refracted direction
+      vec3 envColor = textureCube(envMap, refractedDir).rgb; // Fetch the refracted color
+
+      // Add iridescence for a bubble effect
+      float iridescence = sin(dot(vNormal, vec3(0.0, 1.0, 0.0)) * 10.0 + time) * 0.5 + 0.5;
+      vec3 bubbleColor = mix(envColor, color, iridescence * 0.2); // Blend with iridescence
+
+      gl_FragColor = vec4(bubbleColor, 0.4); // Transparent bubble
+    }
+  `,
   transparent: true,
-  opacity: 0.6,
 });
+
 const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
 scene.add(bubble);
+
+// Add this to the animation loop
+let previousTimestamp = 0;
+
+// Animate the bubble shader's time uniform
+function animateBubbleMaterial(delta) {
+  bubbleMaterial.uniforms.time.value += delta; // Increment time for iridescence animation
+}
 
 // Initial Camera Position
 let radius = 5; // Distance from the bubble
@@ -113,6 +178,10 @@ function animate() {
   updateParticles();
   updateFish();
   renderer.render(scene, camera);
+  const delta = (timestamp - previousTimestamp) * 0.001; // Convert to seconds
+  previousTimestamp = timestamp;
+
+  animateBubbleMaterial(delta);
 }
 
 // Handle resizing
@@ -335,7 +404,7 @@ function updateParticles() {
     system.particles.geometry.attributes.position.needsUpdate = true;
 
     // Decrease lifetime and remove the system if expired
-    system.lifetime -= 0.002;
+    system.lifetime -= 0.003;
     if (system.lifetime <= 0) {
       scene.remove(system.particles);
       activeParticleSystems.splice(i, 1);
@@ -351,13 +420,17 @@ scene.add(fish);
 
 // Initial position and direction
 let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
-let fishDirection = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(); // Random initial direction
+let fishDirection = new THREE.Vector3(
+  Math.random(),
+  Math.random(),
+  Math.random()
+).normalize(); // Random initial direction
 
 // Randomized fish speed within a range
 function getRandomSpeed(min, max) {
   return Math.random() * (max - min) + min; // Random speed between min and max
 }
-let fishSpeed = getRandomSpeed(0.001, 0.0020); // Slower speed between 0.005 and 0.015
+let fishSpeed = getRandomSpeed(0.001, 0.002); // Slower speed between 0.005 and 0.015
 
 // Time tracking for direction changes
 let changeDirectionCounter = 0;
@@ -383,12 +456,14 @@ function keepInsideTopHalfSphere(position, maxRadius) {
 function updateFish() {
   // Randomize speed slightly every few frames
   if (changeDirectionCounter++ >= changeDirectionInterval) {
-    fishSpeed = getRandomSpeed(0.001, 0.0020); // Adjust speed every few frames
+    fishSpeed = getRandomSpeed(0.001, 0.002); // Adjust speed every few frames
     changeDirectionCounter = 0;
   }
 
   // Attempt to move the fish
-  const newPosition = fishPosition.clone().add(fishDirection.clone().multiplyScalar(fishSpeed));
+  const newPosition = fishPosition
+    .clone()
+    .add(fishDirection.clone().multiplyScalar(fishSpeed));
 
   // Ensure movement stays within the 0.8-radius sphere and top hemisphere
   keepInsideTopHalfSphere(newPosition, 0.8);
@@ -398,11 +473,13 @@ function updateFish() {
 
   // Randomly change direction every few frames
   if (changeDirectionCounter++ >= changeDirectionInterval) {
-    fishDirection.set(
-      Math.random() - 0.5, // Random X
-      Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
-      Math.random() - 0.5  // Random Z
-    ).normalize();
+    fishDirection
+      .set(
+        Math.random() - 0.5, // Random X
+        Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
+        Math.random() - 0.5 // Random Z
+      )
+      .normalize();
     changeDirectionCounter = 0;
   }
 
