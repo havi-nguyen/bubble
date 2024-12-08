@@ -13,6 +13,8 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
+let isRefractionEnabled = true; // Track refraction toggle state
+
 // Refraction Environment Map
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 const environmentMap = cubeTextureLoader.load([
@@ -29,18 +31,19 @@ environmentMap.mapping = THREE.CubeRefractionMapping; // Enable refraction mappi
 const bubbleGeometry = new THREE.SphereGeometry(1, 64, 64); // Higher resolution for better visuals
 const bubbleMaterial = new THREE.ShaderMaterial({
   uniforms: {
-    envMap: { value: environmentMap }, // Link the environment map
-    refractionRatio: { value: 0.98 }, // Refraction index
-    time: { value: 0.0 },
-    color: { value: new THREE.Color(0xffffff) }, // Bubble base color
+    envMap: { value: environmentMap }, // Refraction map
+    refractionRatio: { value: 0.98 }, // Refraction ratio
+    time: { value: 0.0 }, // Animation time
+    color: { value: new THREE.Color(0x87ceeb) }, // Base bubble color
+    useRefraction: { value: true }, // Whether to use refraction
   },
   vertexShader: `
     varying vec3 vWorldPosition;
     varying vec3 vNormal;
 
     void main() {
-      vNormal = normalize(normalMatrix * normal); // Pass normals to fragment shader
-      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz; // World position of the vertex
+      vNormal = normalize(normalMatrix * normal);
+      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
       gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPosition, 1.0);
     }
   `,
@@ -49,19 +52,25 @@ const bubbleMaterial = new THREE.ShaderMaterial({
     uniform float refractionRatio;
     uniform float time;
     uniform vec3 color;
+    uniform bool useRefraction;
     varying vec3 vWorldPosition;
     varying vec3 vNormal;
 
     void main() {
-      vec3 viewDir = normalize(vWorldPosition - cameraPosition); // View direction
-      vec3 refractedDir = refract(viewDir, vNormal, refractionRatio); // Refracted direction
-      vec3 envColor = textureCube(envMap, refractedDir).rgb; // Fetch the refracted color
+      vec3 viewDir = normalize(vWorldPosition - cameraPosition);
+      vec3 refractedDir = refract(viewDir, vNormal, refractionRatio);
 
-      // Add iridescence for a bubble effect
+      // Use environment map if refraction is enabled, fallback to base color otherwise
+      vec3 envColor = useRefraction ? textureCube(envMap, refractedDir).rgb : vec3(0.0, 0.0, 0.0);
+
+      // Iridescence effect
       float iridescence = sin(dot(vNormal, vec3(0.0, 1.0, 0.0)) * 10.0 + time) * 0.5 + 0.5;
-      vec3 bubbleColor = mix(envColor, color, iridescence * 0.2); // Blend with iridescence
 
-      gl_FragColor = vec4(bubbleColor, 0.4); // Transparent bubble
+      // Final bubble color blending
+      vec3 bubbleColor = mix(color, envColor, useRefraction ? 0.5 : 0.0);
+      bubbleColor = mix(bubbleColor, color, iridescence * 0.2);
+
+      gl_FragColor = vec4(bubbleColor, 0.4); // Adjust alpha for transparency
     }
   `,
   transparent: true,
@@ -69,6 +78,24 @@ const bubbleMaterial = new THREE.ShaderMaterial({
 
 const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
 scene.add(bubble);
+
+const originalBubbleMaterial = new THREE.MeshBasicMaterial({
+  color: 0x87ceeb,
+  transparent: true,
+  opacity: 0.3,
+});
+
+// Toggle refraction environment map on/off
+window.addEventListener("keydown", (event) => {
+  if (event.code === "KeyR") {
+    isRefractionEnabled = !isRefractionEnabled;
+    if (isRefractionEnabled) {
+      bubble.material = bubbleMaterial;
+    } else {
+      bubble.material = originalBubbleMaterial;
+    }
+  }
+});
 
 // Add this to the animation loop
 let previousTimestamp = 0;
