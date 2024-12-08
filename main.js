@@ -596,36 +596,32 @@ loader.load(
         const material = new THREE.MeshStandardMaterial();
 
         // Check the mesh name and apply the appropriate material settings
-        // Apply materials and textures correctly
-if (node.name === 'body') {
-  material.map = textures[0]; // baseColorTexture (color map)
-  material.normalMap = textures[2]; // normalTexture
-  material.metalnessMap = textures[1]; // metallicRoughnessTexture (metallic map)
-  material.roughnessMap = textures[1]; // metallicRoughnessTexture (roughness map)
-  material.metalness = 0.0; // If specific values are required
-  material.roughness = 1.0; // Set roughness factor as well (if necessary)
-} else if (node.name === 'Fin_down') {
-  material.map = textures[3]; // baseColorTexture
-  material.normalMap = textures[5]; // normalTexture
-  material.metalnessMap = textures[4]; // metallicRoughnessTexture
-  material.roughnessMap = textures[4]; // metallicRoughnessTexture
-  material.alphaMode = 'BLEND';
-} else if (node.name === 'fin_back') {
-  material.map = textures[6]; // baseColorTexture
-  material.normalMap = textures[8]; // normalTexture
-  material.metalnessMap = textures[7]; // metallicRoughnessTexture
-  material.roughnessMap = textures[7]; // metallicRoughnessTexture
-} else if (node.name === 'fin_top') {
-  material.map = textures[9]; // baseColorTexture
-  material.normalMap = textures[11]; // normalTexture
-  material.metalnessMap = textures[10]; // metallicRoughnessTexture
-  material.roughnessMap = textures[10]; // metallicRoughnessTexture
-} else if (node.name === 'eyes') {
-  material.map = textures[12]; // baseColorTexture
-  material.metalnessMap = textures[13]; // metallicRoughnessTexture
-  material.roughnessMap = textures[13]; // roughnessTexture
-}
-
+        if (node.name === 'body') {
+          material.map = textures[0]; // baseColorTexture
+          material.normalMap = textures[2]; // normalTexture
+          material.metalnessMap = textures[1]; // metallicRoughnessTexture
+          material.roughnessMap = textures[1]; // metallicRoughnessTexture
+        } else if (node.name === 'Fin_down') {
+          material.map = textures[3]; // baseColorTexture
+          material.normalMap = textures[5]; // normalTexture
+          material.metalnessMap = textures[4]; // metallicRoughnessTexture
+          material.roughnessMap = textures[4]; // metallicRoughnessTexture
+          material.alphaMode = 'BLEND';
+        } else if (node.name === 'fin_back') {
+          material.map = textures[6]; // baseColorTexture
+          material.normalMap = textures[8]; // normalTexture
+          material.metalnessMap = textures[7]; // metallicRoughnessTexture
+          material.roughnessMap = textures[7]; // metallicRoughnessTexture
+        } else if (node.name === 'fin_top') {
+          material.map = textures[9]; // baseColorTexture
+          material.normalMap = textures[11]; // normalTexture
+          material.metalnessMap = textures[10]; // metallicRoughnessTexture
+          material.roughnessMap = textures[10]; // metallicRoughnessTexture
+        } else if (node.name === 'eyes') {
+          material.map = textures[12]; // baseColorTexture
+          material.metalnessMap = textures[13]; // metallicRoughnessTexture
+          material.roughnessMap = textures[13]; // roughnessTexture
+        }
 
         // Apply double-sided property if needed
         if (node.name === 'Fin_down' || node.name === 'fin_top') {
@@ -673,7 +669,15 @@ if (node.name === 'body') {
         // Reverse direction to prevent immediately leaving again
         fishDirection.reflect(position.clone().normalize());
       }
+    
+      // Ensure the fish stays in the top hemisphere (y >= 0)
+      if (position.y <= 0) {
+        position.y = 0;  // Prevent fish from going below the equator
+        fishDirection.y = Math.abs(fishDirection.y);  // Adjust direction to stay upwards
+      }
     }
+    
+    
 
     // Ensure the fish stays in the top hemisphere (y >= 0)
     function keepInTopHemisphere(position) {
@@ -728,11 +732,9 @@ if (node.name === 'body') {
     // Animation loop to update fish movement
     function animate() {
       requestAnimationFrame(animate);
-
-      // Update the fish's movement
       updateFish();
       updateMovement();
-      // Render the scene
+      updateParticles();
       renderer.render(scene, camera);
     }
 
