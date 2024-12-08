@@ -13,21 +13,11 @@ const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
-// // Bubble in the center
-// const bubbleGeometry = new THREE.SphereGeometry(1, 32, 32);
-// const bubbleMaterial = new THREE.MeshBasicMaterial({
-//   color: 0x87ceeb, // Light blue
-//   transparent: true,
-//   opacity: 0.6,
-// });
-// const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
-// scene.add(bubble);
-
 // Refraction Environment Map
 const cubeTextureLoader = new THREE.CubeTextureLoader();
 const environmentMap = cubeTextureLoader.load([
-  "left.png", // Positive X
-  "right.png", // Negative X
+  "right.png", // Positive X
+  "left.png", // Negative X
   "top.png", // Positive Y
   "bottom.png", // Negative Y
   "front.png", // Positive Z
@@ -209,18 +199,11 @@ const materialArray = skyboxTextures.map(
     })
 );
 
-// Create and add the skyboxa
+// Create and add the skybox
 const skyboxGeo = new THREE.BoxGeometry(50, 50, 50); // Adjust size as needed
 const skybox = new THREE.Mesh(skyboxGeo, materialArray);
 scene.add(skybox);
 
-// // Cube inside the bubble
-// const cubeGeometry = new THREE.BoxGeometry(0.5, 0.5, 0.5);
-// const cubeMaterial = new THREE.MeshBasicMaterial({ color: 0xff0000 }); // Red color for better visibility
-// const cube = new THREE.Mesh(cubeGeometry, cubeMaterial);
-// scene.add(cube); // Add cube to the scene
-// cube.position.set(0, 0, 0); // Position cube at the center of the bubble
-// Hemisphere (flipped to cover the bottom half)
 const terrainRadius = 0.9; // Radius of the hemisphere
 const terrainSegments = 64; // Segments for smoothness
 const hemisphereGeometry = new THREE.SphereGeometry(
