@@ -2,7 +2,11 @@ import * as THREE from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-// Scene, Camera, Renderer
+/****************************************************************************
+ *
+ * Scene, Camera, Renderer
+ *
+ ****************************************************************************/
 const scene = new THREE.Scene();
 const camera = new THREE.PerspectiveCamera(
   75,
@@ -13,98 +17,6 @@ const camera = new THREE.PerspectiveCamera(
 const renderer = new THREE.WebGLRenderer();
 renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
-
-let isRefractionEnabled = true; // Track refraction toggle state
-
-// Refraction Environment Map
-const cubeTextureLoader = new THREE.CubeTextureLoader();
-const environmentMap = cubeTextureLoader.load([
-  "right.png", // Positive X
-  "left.png", // Negative X
-  "top.png", // Positive Y
-  "bottom.png", // Negative Y
-  "front.png", // Positive Z
-  "back.png", // Negative Z
-]);
-environmentMap.mapping = THREE.CubeRefractionMapping; // Enable refraction mapping
-
-// Bubble in the center
-const bubbleGeometry = new THREE.SphereGeometry(1, 64, 64); // Higher resolution for better visuals
-const bubbleMaterial = new THREE.ShaderMaterial({
-  uniforms: {
-    envMap: { value: environmentMap }, // Refraction map
-    refractionRatio: { value: 0.98 }, // Refraction ratio
-    time: { value: 0.0 }, // Animation time
-    color: { value: new THREE.Color(0x87ceeb) }, // Base bubble color
-    useRefraction: { value: true }, // Whether to use refraction
-  },
-  vertexShader: `
-    varying vec3 vWorldPosition;
-    varying vec3 vNormal;
-
-    void main() {
-      vNormal = normalize(normalMatrix * normal);
-      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
-      gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPosition, 1.0);
-    }
-  `,
-  fragmentShader: `
-    uniform samplerCube envMap;
-    uniform float refractionRatio;
-    uniform float time;
-    uniform vec3 color;
-    uniform bool useRefraction;
-    varying vec3 vWorldPosition;
-    varying vec3 vNormal;
-
-    void main() {
-      vec3 viewDir = normalize(vWorldPosition - cameraPosition);
-      vec3 refractedDir = refract(viewDir, vNormal, refractionRatio);
-
-      // Use environment map if refraction is enabled, fallback to base color otherwise
-      vec3 envColor = useRefraction ? textureCube(envMap, refractedDir).rgb : vec3(0.0, 0.0, 0.0);
-
-      // Iridescence effect
-      float iridescence = sin(dot(vNormal, vec3(0.0, 1.0, 0.0)) * 10.0 + time) * 0.5 + 0.5;
-
-      // Final bubble color blending
-      vec3 bubbleColor = mix(color, envColor, useRefraction ? 0.5 : 0.0);
-      bubbleColor = mix(bubbleColor, color, iridescence * 0.2);
-
-      gl_FragColor = vec4(bubbleColor, 0.4); // Adjust alpha for transparency
-    }
-  `,
-  transparent: true,
-});
-
-const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
-scene.add(bubble);
-
-const originalBubbleMaterial = new THREE.MeshBasicMaterial({
-  color: 0x87ceeb,
-  transparent: true,
-  opacity: 0.3,
-});
-
-// Toggle refraction environment map on/off
-window.addEventListener("keydown", (event) => {
-  if (event.code === "KeyR") {
-    isRefractionEnabled = !isRefractionEnabled;
-    if (isRefractionEnabled) {
-      bubble.material = bubbleMaterial;
-    } else {
-      bubble.material = originalBubbleMaterial;
-    }
-  }
-});
-
-// Add this to the animation loop
-let previousTimestamp = 0;
-
-// Animate the bubble shader's time uniform
-function animateBubbleMaterial(delta) {
-  bubbleMaterial.uniforms.time.value += delta; // Increment time for iridescence animation
-}
 
 // Initial Camera Position
 let radius = 5; // Distance from the bubble
@@ -189,19 +101,6 @@ function updateMovement() {
   camera.lookAt(0, 0, 0);
 }
 
-// Animation loop
-function animate() {
-  requestAnimationFrame(animate);
-  updateMovement(); // Update camera position
-  updateParticles();
-  updateFish();
-  renderer.render(scene, camera);
-  const delta = (timestamp - previousTimestamp) * 0.001; // Convert to seconds
-  previousTimestamp = timestamp;
-
-  animateBubbleMaterial(delta);
-}
-
 // Handle resizing
 window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
@@ -209,7 +108,26 @@ window.addEventListener("resize", () => {
   renderer.setSize(window.innerWidth, window.innerHeight);
 });
 
-// skybox functionality
+/****************************************************************************
+ *
+ * Lighting
+ *
+ ****************************************************************************/
+const light = new THREE.AmbientLight(0x404040, 1); // Ambient light with soft white color
+scene.add(light);
+
+const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // White directional light
+directionalLight.position.set(0.3, 3, 1).normalize(); // Directional light from above
+scene.add(directionalLight);
+
+const ambientLight = new THREE.AmbientLight(0xffffff, 2); // Brighter ambient light
+scene.add(ambientLight);
+
+/****************************************************************************
+ *
+ * Skybox
+ *
+ ****************************************************************************/
 const ft = new THREE.TextureLoader().load("left.png");
 const bk = new THREE.TextureLoader().load("right.png");
 const up = new THREE.TextureLoader().load("top.png");
@@ -232,6 +150,97 @@ const skyboxGeo = new THREE.BoxGeometry(50, 50, 50); // Adjust size as needed
 const skybox = new THREE.Mesh(skyboxGeo, materialArray);
 scene.add(skybox);
 
+/****************************************************************************
+ *
+ * Refraction Environment Map / Bubble
+ *
+ ****************************************************************************/
+let isRefractionEnabled = true;
+const cubeTextureLoader = new THREE.CubeTextureLoader();
+const environmentMap = cubeTextureLoader.load([
+  "right.png", // Positive X
+  "left.png", // Negative X
+  "top.png", // Positive Y
+  "bottom.png", // Negative Y
+  "front.png", // Positive Z
+  "back.png", // Negative Z
+]);
+environmentMap.mapping = THREE.CubeRefractionMapping; // Enable refraction mapping
+
+// Bubble in the center
+const bubbleGeometry = new THREE.SphereGeometry(1, 64, 64); // Higher resolution for better visuals
+const bubbleMaterial = new THREE.ShaderMaterial({
+  uniforms: {
+    envMap: { value: environmentMap }, // Refraction map
+    refractionRatio: { value: 0.98 }, // Refraction ratio
+    time: { value: 0.0 }, // Animation time
+    color: { value: new THREE.Color(0x87ceeb) }, // Base bubble color
+    useRefraction: { value: true }, // Whether to use refraction
+  },
+  vertexShader: `
+    varying vec3 vWorldPosition;
+    varying vec3 vNormal;
+
+    void main() {
+      vNormal = normalize(normalMatrix * normal);
+      vWorldPosition = (modelMatrix * vec4(position, 1.0)).xyz;
+      gl_Position = projectionMatrix * viewMatrix * vec4(vWorldPosition, 1.0);
+    }
+  `,
+  fragmentShader: `
+    uniform samplerCube envMap;
+    uniform float refractionRatio;
+    uniform float time;
+    uniform vec3 color;
+    uniform bool useRefraction;
+    varying vec3 vWorldPosition;
+    varying vec3 vNormal;
+
+    void main() {
+      vec3 viewDir = normalize(vWorldPosition - cameraPosition);
+      vec3 refractedDir = refract(viewDir, vNormal, refractionRatio);
+
+      // Use environment map if refraction is enabled, fallback to base color otherwise
+      vec3 envColor = useRefraction ? textureCube(envMap, refractedDir).rgb : vec3(0.0, 0.0, 0.0);
+
+      // Iridescence effect
+      float iridescence = sin(dot(vNormal, vec3(0.0, 1.0, 0.0)) * 10.0 + time) * 0.5 + 0.5;
+
+      // Final bubble color blending
+      vec3 bubbleColor = mix(color, envColor, useRefraction ? 0.5 : 0.0);
+      bubbleColor = mix(bubbleColor, color, iridescence * 0.2);
+
+      gl_FragColor = vec4(bubbleColor, 0.4); // Adjust alpha for transparency
+    }
+  `,
+  transparent: true,
+});
+
+const bubble = new THREE.Mesh(bubbleGeometry, bubbleMaterial);
+scene.add(bubble);
+const originalBubbleMaterial = new THREE.MeshBasicMaterial({
+  color: 0x87ceeb,
+  transparent: true,
+  opacity: 0.3,
+});
+
+// Toggle refraction environment map on/off
+window.addEventListener("keydown", (event) => {
+  if (event.code === "KeyR") {
+    isRefractionEnabled = !isRefractionEnabled;
+    if (isRefractionEnabled) {
+      bubble.material = bubbleMaterial;
+    } else {
+      bubble.material = originalBubbleMaterial;
+    }
+  }
+});
+
+/****************************************************************************
+ *
+ * Sand / Hemisphere and Disc
+ *
+ ****************************************************************************/
 const terrainRadius = 0.9; // Radius of the hemisphere
 const terrainSegments = 64; // Segments for smoothness
 const hemisphereGeometry = new THREE.SphereGeometry(
@@ -299,16 +308,11 @@ for (let i = 0; i < positions.length; i += 3) {
 cutRegionGeometry.computeVertexNormals();
 cutRegionGeometry.attributes.position.needsUpdate = true;
 
-const light = new THREE.AmbientLight(0x404040, 1); // Ambient light with soft white color
-scene.add(light);
-
-const directionalLight = new THREE.DirectionalLight(0xffffff, 1); // White directional light
-directionalLight.position.set(0.3, 3, 1).normalize(); // Directional light from above
-scene.add(directionalLight);
-
-const ambientLight = new THREE.AmbientLight(0xffffff, 2); // Brighter ambient light
-scene.add(ambientLight);
-
+/****************************************************************************
+ *
+ * Bubbles / Particle System
+ *
+ ****************************************************************************/
 // Bubbles on Mouse Click and Drag
 let bubbleGenerationCounter = 0; // Counter to control frequency
 const activeParticleSystems = [];
@@ -426,136 +430,11 @@ function updateParticles() {
   }
 }
 
-// const loader = new GLTFLoader();
-// loader.load(
-//   './red_betta_fish/scene.gltf',
-//   (gltf) => {
-//     const fish = gltf.scene;
-
-//     // Log loaded GLTF object
-//     console.log("GLTF Loaded:", fish);
-
-//     // Scale and position adjustments
-//     fish.scale.set(0.0008, 0.0008, 0.0008); // Adjust based on the model's size
-//     fish.position.set(0, 0, 0); // Set to origin for visibility
-
-//     // Replace material for testing
-//     fish.traverse((node) => {
-//       if (node.isMesh) {
-//         node.material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
-//       }
-//     });
-
-//     // Add fish to the scene
-//     scene.add(fish);
-//     window.fish = fish;
-
-//     console.log("Fish added to scene:", fish.position);
-
-//     // Compute fish's bounding box
-//     const boundingBox = new THREE.Box3().setFromObject(fish);
-//     const fishDimensions = new THREE.Vector3();
-//     boundingBox.getSize(fishDimensions);
-
-//     // Calculate the radius buffer (distance from the center to the furthest part of the fish)
-//     const fishRadiusBuffer = fishDimensions.length() / 2;
-
-//     // Initial fish position and direction
-//     let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
-//     let fishDirection = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(); // Random initial direction
-
-//     // Randomized fish speed within a range
-//     function getRandomSpeed(min, max) {
-//       return Math.random() * (max - min) + min; // Random speed between min and max
-//     }
-//     let fishSpeed = getRandomSpeed(0.0001, 0.0020); // Slower speed between 0.001 and 0.0020
-
-//     // Time tracking for direction changes
-//     let changeDirectionCounter = 0;
-//     const changeDirectionInterval = 300; // Increase the interval to change direction every 300 frames
-
-//     // Ensure the fish stays inside the 0.9-radius sphere (accounting for its size)
-//     function keepInsideSphere(position, maxRadius, buffer) {
-//       // If the fish moves outside the sphere, reflect its position back inside
-//       if (position.length() + buffer > maxRadius) {
-//         position.normalize().multiplyScalar(maxRadius - buffer - 0.01); // Slightly inside
-//         // Reverse direction to prevent immediately leaving again
-//         fishDirection.reflect(position.clone().normalize());
-//       }
-//     }
-
-//     // Ensure the fish stays in the top hemisphere (y >= 0)
-//     function keepInTopHemisphere(position) {
-//       if (position.y < 0) {
-//         position.y = Math.abs(position.y); // Reflect to stay above equator
-//         fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to point upwards
-//       }
-//     }
-
-//     // Update fish movement
-//     function updateFish() {
-//       // Randomize speed slightly every few frames
-//       if (changeDirectionCounter++ >= changeDirectionInterval) {
-//         fishSpeed = getRandomSpeed(0.001, 0.0020); // Adjust speed every few frames
-//         changeDirectionCounter = 0;
-//       }
-
-//       // Attempt to move the fish
-//       const newPosition = fishPosition.clone().add(fishDirection.clone().multiplyScalar(fishSpeed));
-
-//       // Ensure movement stays within the 0.9-radius sphere
-//       keepInsideSphere(newPosition, 0.9, fishRadiusBuffer);
-
-//       // Ensure the fish stays in the top hemisphere
-//       keepInTopHemisphere(newPosition);
-
-//       // Update fish's position
-//       fishPosition.copy(newPosition);
-
-//       // Randomly change direction every few frames
-//       if (changeDirectionCounter++ >= changeDirectionInterval) {
-//         fishDirection.set(
-//           Math.random() - 0.5, // Random X
-//           Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
-//           Math.random() - 0.5  // Random Z
-//         ).normalize();
-//         changeDirectionCounter = 0;
-//       }
-
-//       // Update the fish's position in the scene
-//       fish.position.copy(fishPosition);
-
-//       // Point the fish in the direction it's moving
-//       const targetQuaternion = new THREE.Quaternion();
-//       targetQuaternion.setFromUnitVectors(
-//         new THREE.Vector3(0, 0, 1), // Default forward direction
-//         fishDirection.clone().normalize() // Fish's movement direction
-//       );
-//       fish.quaternion.copy(targetQuaternion);
-//     }
-
-//     // Animation loop to update fish movement
-//     function animate() {
-//       requestAnimationFrame(animate);
-
-//       // Update the fish's movement
-//       updateFish();
-
-//       // Render the scene
-//       renderer.render(scene, camera);
-//     }
-
-//     // Start the animation loop
-//     animate();
-//   },
-//   (xhr) => {
-//     console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
-//   },
-//   (error) => {
-//     console.error("An error occurred while loading the GLTF file:", error);
-//   }
-// );
-
+/****************************************************************************
+ *
+ * Fish / Texture Loading
+ *
+ ****************************************************************************/
 const loader = new GLTFLoader();
 const textureLoader = new THREE.TextureLoader(); // Texture loader for loading textures
 
@@ -597,7 +476,7 @@ loader.load(
     fish.traverse((node) => {
       if (node.isMesh) {
         const material = new THREE.MeshStandardMaterial({
-          color: new THREE.Color(0xffa500), // Set the color to orange
+          color: new THREE.Color(0xffabfa), // Set the color to orange
           metalness: 0.2, // Adjust metalness
           roughness: 0.8, // Adjust roughness
         });
@@ -620,6 +499,11 @@ loader.load(
 
     console.log("Fish added to scene:", fish.position);
 
+    /****************************************************************************
+     *
+     * Fish / Movement
+     *
+     ****************************************************************************/
     // Compute fish's bounding box
     const boundingBox = new THREE.Box3().setFromObject(fish);
     const fishDimensions = new THREE.Vector3();
@@ -716,7 +600,11 @@ loader.load(
       fish.quaternion.copy(targetQuaternion);
     }
 
-    // Animation loop to update fish movement
+    /****************************************************************************
+     *
+     * Animation
+     *
+     ****************************************************************************/
     function animate() {
       requestAnimationFrame(animate);
       updateFish();
@@ -724,8 +612,6 @@ loader.load(
       updateParticles();
       renderer.render(scene, camera);
     }
-
-    // Start the animation loop
     animate();
   },
   (xhr) => {
