@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { ImprovedNoise } from "three/examples/jsm/math/ImprovedNoise.js";
+import { GLTFLoader } from 'three/examples/jsm/loaders/GLTFLoader.js';
 
 // Scene, Camera, Renderer
 const scene = new THREE.Scene();
@@ -422,80 +423,191 @@ function updateParticles() {
   }
 }
 
-// Fish
-const fishGeometry = new THREE.SphereGeometry(0.1, 16, 16); // Fish radius is 0.1
-const fishMaterial = new THREE.MeshPhongMaterial({ color: 0xff6347 });
-const fish = new THREE.Mesh(fishGeometry, fishMaterial);
-scene.add(fish);
 
-// Initial position and direction
-let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
-let fishDirection = new THREE.Vector3(
-  Math.random(),
-  Math.random(),
-  Math.random()
-).normalize(); // Random initial direction
+const loader = new GLTFLoader();
+loader.load(
+  './red_betta_fish/scene.gltf',
+  (gltf) => {
+    const fish = gltf.scene;
 
-// Randomized fish speed within a range
-function getRandomSpeed(min, max) {
-  return Math.random() * (max - min) + min; // Random speed between min and max
-}
-let fishSpeed = getRandomSpeed(0.001, 0.002); // Slower speed between 0.005 and 0.015
+    // Log loaded GLTF object
+    console.log("GLTF Loaded:", fish);
 
-// Time tracking for direction changes
-let changeDirectionCounter = 0;
-const changeDirectionInterval = 300; // Increase the interval to change direction every 300 frames
+    // Scale and position adjustments
+    fish.scale.set(0.0008, 0.0008, 0.0008); // Adjust based on the model's size
+    fish.position.set(0, 0, 0); // Set to origin for visibility
 
-// Ensure the fish stays inside the 0.8-radius sphere and the top hemisphere
-function keepInsideTopHalfSphere(position, maxRadius) {
-  // If the fish moves outside the sphere, reflect its position back inside
-  if (position.length() > maxRadius) {
-    position.normalize().multiplyScalar(maxRadius - 0.1); // Move it slightly inside
-    // Reverse direction to prevent immediately leaving again
-    fishDirection.reflect(position.clone().normalize());
+    // Replace material for testing
+    fish.traverse((node) => {
+      if (node.isMesh) {
+        node.material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+      }
+    });
+
+    // Add fish to the scene
+    scene.add(fish);
+    window.fish = fish;
+
+    console.log("Fish added to scene:", fish.position);
+
+    // Initial fish position and direction
+    let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
+    let fishDirection = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(); // Random initial direction
+
+    // Randomized fish speed within a range
+    function getRandomSpeed(min, max) {
+      return Math.random() * (max - min) + min; // Random speed between min and max
+    }
+    let fishSpeed = getRandomSpeed(0.001, 0.0020); // Slower speed between 0.001 and 0.0020
+
+    // Time tracking for direction changes
+    let changeDirectionCounter = 0;
+    const changeDirectionInterval = 300; // Increase the interval to change direction every 300 frames
+
+    // Ensure the fish stays inside the 0.8-radius sphere and the top hemisphere
+    function keepInsideTopHalfSphere(position, maxRadius) {
+      // If the fish moves outside the sphere, reflect its position back inside
+      if (position.length() > maxRadius) {
+        position.normalize().multiplyScalar(maxRadius - 0.1); // Move it slightly inside
+        // Reverse direction to prevent immediately leaving again
+        fishDirection.reflect(position.clone().normalize());
+      }
+
+      // Ensure the fish stays in the top hemisphere (y >= 0)
+      if (position.y < 0) {
+        position.y = Math.abs(position.y); // Reflect it to stay above the equator
+        fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to point upwards
+      }
+    }
+
+    // Update fish movement
+    function updateFish() {
+      // Randomize speed slightly every few frames
+      if (changeDirectionCounter++ >= changeDirectionInterval) {
+        fishSpeed = getRandomSpeed(0.001, 0.0020); // Adjust speed every few frames
+        changeDirectionCounter = 0;
+      }
+
+      // Attempt to move the fish
+      const newPosition = fishPosition.clone().add(fishDirection.clone().multiplyScalar(fishSpeed));
+
+      // Ensure movement stays within the 0.8-radius sphere and top hemisphere
+      keepInsideTopHalfSphere(newPosition, 0.8);
+
+      // Update fish's position
+      fishPosition.copy(newPosition);
+
+      // Randomly change direction every few frames
+      if (changeDirectionCounter++ >= changeDirectionInterval) {
+        fishDirection.set(
+          Math.random() - 0.5, // Random X
+          Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
+          Math.random() - 0.5  // Random Z
+        ).normalize();
+        changeDirectionCounter = 0;
+      }
+
+      // Update the fish's position in the scene
+      fish.position.copy(fishPosition);
+    }
+
+    // Animation loop to update fish movement
+    function animate() {
+      requestAnimationFrame(animate);
+
+      // Update the fish's movement
+      updateFish();
+
+      // Render the scene
+      renderer.render(scene, camera);
+    }
+
+    // Start the animation loop
+    animate();
+  },
+  (xhr) => {
+    console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+  },
+  (error) => {
+    console.error("An error occurred while loading the GLTF file:", error);
   }
+);
 
-  // Ensure the fish stays in the top hemisphere (y >= 0)
-  if (position.y < 0) {
-    position.y = Math.abs(position.y); // Reflect it to stay above the equator
-    fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to point upwards
-  }
-}
 
-// Update fish movement
-function updateFish() {
-  // Randomize speed slightly every few frames
-  if (changeDirectionCounter++ >= changeDirectionInterval) {
-    fishSpeed = getRandomSpeed(0.001, 0.002); // Adjust speed every few frames
-    changeDirectionCounter = 0;
-  }
+// // Fish
+// const fishGeometry = new THREE.SphereGeometry(0.1, 16, 16); // Fish radius is 0.1
+// const fishMaterial = new THREE.MeshPhongMaterial({ color: 0xff6347 });
+// const fish = new THREE.Mesh(fishGeometry, fishMaterial);
+// scene.add(fish);
 
-  // Attempt to move the fish
-  const newPosition = fishPosition
-    .clone()
-    .add(fishDirection.clone().multiplyScalar(fishSpeed));
+// // Initial position and direction
+// let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
+// let fishDirection = new THREE.Vector3(
+//   Math.random(),
+//   Math.random(),
+//   Math.random()
+// ).normalize(); // Random initial direction
 
-  // Ensure movement stays within the 0.8-radius sphere and top hemisphere
-  keepInsideTopHalfSphere(newPosition, 0.8);
+// // Randomized fish speed within a range
+// function getRandomSpeed(min, max) {
+//   return Math.random() * (max - min) + min; // Random speed between min and max
+// }
+// let fishSpeed = getRandomSpeed(0.001, 0.002); // Slower speed between 0.005 and 0.015
 
-  // Update fish's position
-  fishPosition.copy(newPosition);
+// // Time tracking for direction changes
+// let changeDirectionCounter = 0;
+// const changeDirectionInterval = 300; // Increase the interval to change direction every 300 frames
 
-  // Randomly change direction every few frames
-  if (changeDirectionCounter++ >= changeDirectionInterval) {
-    fishDirection
-      .set(
-        Math.random() - 0.5, // Random X
-        Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
-        Math.random() - 0.5 // Random Z
-      )
-      .normalize();
-    changeDirectionCounter = 0;
-  }
+// // Ensure the fish stays inside the 0.8-radius sphere and the top hemisphere
+// function keepInsideTopHalfSphere(position, maxRadius) {
+//   // If the fish moves outside the sphere, reflect its position back inside
+//   if (position.length() > maxRadius) {
+//     position.normalize().multiplyScalar(maxRadius - 0.1); // Move it slightly inside
+//     // Reverse direction to prevent immediately leaving again
+//     fishDirection.reflect(position.clone().normalize());
+//   }
 
-  // Update the fish's position in the scene
-  fish.position.copy(fishPosition);
-}
+//   // Ensure the fish stays in the top hemisphere (y >= 0)
+//   if (position.y < 0) {
+//     position.y = Math.abs(position.y); // Reflect it to stay above the equator
+//     fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to point upwards
+//   }
+// }
+
+// // Update fish movement
+// function updateFish() {
+//   // Randomize speed slightly every few frames
+//   if (changeDirectionCounter++ >= changeDirectionInterval) {
+//     fishSpeed = getRandomSpeed(0.001, 0.002); // Adjust speed every few frames
+//     changeDirectionCounter = 0;
+//   }
+
+//   // Attempt to move the fish
+//   const newPosition = fishPosition
+//     .clone()
+//     .add(fishDirection.clone().multiplyScalar(fishSpeed));
+
+//   // Ensure movement stays within the 0.8-radius sphere and top hemisphere
+//   keepInsideTopHalfSphere(newPosition, 0.8);
+
+//   // Update fish's position
+//   fishPosition.copy(newPosition);
+
+//   // Randomly change direction every few frames
+//   if (changeDirectionCounter++ >= changeDirectionInterval) {
+//     fishDirection
+//       .set(
+//         Math.random() - 0.5, // Random X
+//         Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
+//         Math.random() - 0.5 // Random Z
+//       )
+//       .normalize();
+//     changeDirectionCounter = 0;
+//   }
+
+//   // Update the fish's position in the scene
+//   fish.position.copy(fishPosition);
+// }
 
 // Start animation
 animate();
