@@ -151,7 +151,7 @@ scene.add(skybox);
 // scene.add(cube); // Add cube to the scene
 // cube.position.set(0, 0, 0); // Position cube at the center of the bubble
 // Hemisphere (flipped to cover the bottom half)
-const terrainRadius = 0.8; // Radius of the hemisphere
+const terrainRadius = 0.9; // Radius of the hemisphere
 const terrainSegments = 64; // Segments for smoothness
 const hemisphereGeometry = new THREE.SphereGeometry(
     terrainRadius, // Radius
@@ -162,16 +162,6 @@ const hemisphereGeometry = new THREE.SphereGeometry(
     Math.PI / 2, // thetaStart: Start at the equator
     Math.PI / 2 // thetaLength: Covers only the bottom hemisphere
 );
-
-// Default material for the hemisphere with a sand color
-const hemisphereMaterial = new THREE.MeshPhongMaterial({
-    color: 0xD2B48C, // Tan/sand color
-    shininess: 20, // Adds a subtle shine
-    flatShading: false, // Ensures smooth shading
-});
-
-const hemisphere = new THREE.Mesh(hemisphereGeometry, hemisphereMaterial);
-scene.add(hemisphere);
 
 // Disc geometry for the flat cut region
 const discRadius = terrainRadius; // Match the radius of the hemisphere
@@ -193,6 +183,16 @@ const cutRegionMaterial = new THREE.MeshPhongMaterial({
 
 const cutRegion = new THREE.Mesh(cutRegionGeometry, cutRegionMaterial);
 scene.add(cutRegion);
+
+// Default material for the hemisphere with a sand color
+const hemisphereMaterial = new THREE.MeshPhongMaterial({
+  color: 0xD2B48C, // Tan/sand color
+  shininess: 20, // Adds a subtle shine
+  flatShading: false, // Ensures smooth shading
+});
+
+const hemisphere = new THREE.Mesh(hemisphereGeometry, hemisphereMaterial);
+scene.add(hemisphere);
 
 // Position the disc exactly at the equator of the hemisphere
 cutRegion.position.set(0, -terrainRadius/20, 0); // Set position to the cut (equator) of the hemisphere
