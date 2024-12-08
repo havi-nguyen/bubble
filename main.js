@@ -423,8 +423,161 @@ function updateParticles() {
   }
 }
 
+// const loader = new GLTFLoader();
+// loader.load(
+//   './red_betta_fish/scene.gltf',
+//   (gltf) => {
+//     const fish = gltf.scene;
+
+//     // Log loaded GLTF object
+//     console.log("GLTF Loaded:", fish);
+
+//     // Scale and position adjustments
+//     fish.scale.set(0.0008, 0.0008, 0.0008); // Adjust based on the model's size
+//     fish.position.set(0, 0, 0); // Set to origin for visibility
+
+//     // Replace material for testing
+//     fish.traverse((node) => {
+//       if (node.isMesh) {
+//         node.material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+//       }
+//     });
+
+//     // Add fish to the scene
+//     scene.add(fish);
+//     window.fish = fish;
+
+//     console.log("Fish added to scene:", fish.position);
+
+//     // Compute fish's bounding box
+//     const boundingBox = new THREE.Box3().setFromObject(fish);
+//     const fishDimensions = new THREE.Vector3();
+//     boundingBox.getSize(fishDimensions);
+
+//     // Calculate the radius buffer (distance from the center to the furthest part of the fish)
+//     const fishRadiusBuffer = fishDimensions.length() / 2;
+
+//     // Initial fish position and direction
+//     let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
+//     let fishDirection = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(); // Random initial direction
+
+//     // Randomized fish speed within a range
+//     function getRandomSpeed(min, max) {
+//       return Math.random() * (max - min) + min; // Random speed between min and max
+//     }
+//     let fishSpeed = getRandomSpeed(0.0001, 0.0020); // Slower speed between 0.001 and 0.0020
+
+//     // Time tracking for direction changes
+//     let changeDirectionCounter = 0;
+//     const changeDirectionInterval = 300; // Increase the interval to change direction every 300 frames
+
+//     // Ensure the fish stays inside the 0.9-radius sphere (accounting for its size)
+//     function keepInsideSphere(position, maxRadius, buffer) {
+//       // If the fish moves outside the sphere, reflect its position back inside
+//       if (position.length() + buffer > maxRadius) {
+//         position.normalize().multiplyScalar(maxRadius - buffer - 0.01); // Slightly inside
+//         // Reverse direction to prevent immediately leaving again
+//         fishDirection.reflect(position.clone().normalize());
+//       }
+//     }
+
+//     // Ensure the fish stays in the top hemisphere (y >= 0)
+//     function keepInTopHemisphere(position) {
+//       if (position.y < 0) {
+//         position.y = Math.abs(position.y); // Reflect to stay above equator
+//         fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to point upwards
+//       }
+//     }
+
+//     // Update fish movement
+//     function updateFish() {
+//       // Randomize speed slightly every few frames
+//       if (changeDirectionCounter++ >= changeDirectionInterval) {
+//         fishSpeed = getRandomSpeed(0.001, 0.0020); // Adjust speed every few frames
+//         changeDirectionCounter = 0;
+//       }
+
+//       // Attempt to move the fish
+//       const newPosition = fishPosition.clone().add(fishDirection.clone().multiplyScalar(fishSpeed));
+
+//       // Ensure movement stays within the 0.9-radius sphere
+//       keepInsideSphere(newPosition, 0.9, fishRadiusBuffer);
+
+//       // Ensure the fish stays in the top hemisphere
+//       keepInTopHemisphere(newPosition);
+
+//       // Update fish's position
+//       fishPosition.copy(newPosition);
+
+//       // Randomly change direction every few frames
+//       if (changeDirectionCounter++ >= changeDirectionInterval) {
+//         fishDirection.set(
+//           Math.random() - 0.5, // Random X
+//           Math.random() * 0.5, // Positive bias for Y to stay in the top hemisphere
+//           Math.random() - 0.5  // Random Z
+//         ).normalize();
+//         changeDirectionCounter = 0;
+//       }
+
+//       // Update the fish's position in the scene
+//       fish.position.copy(fishPosition);
+
+//       // Point the fish in the direction it's moving
+//       const targetQuaternion = new THREE.Quaternion();
+//       targetQuaternion.setFromUnitVectors(
+//         new THREE.Vector3(0, 0, 1), // Default forward direction
+//         fishDirection.clone().normalize() // Fish's movement direction
+//       );
+//       fish.quaternion.copy(targetQuaternion);
+//     }
+
+//     // Animation loop to update fish movement
+//     function animate() {
+//       requestAnimationFrame(animate);
+
+//       // Update the fish's movement
+//       updateFish();
+
+//       // Render the scene
+//       renderer.render(scene, camera);
+//     }
+
+//     // Start the animation loop
+//     animate();
+//   },
+//   (xhr) => {
+//     console.log((xhr.loaded / xhr.total) * 100 + "% loaded");
+//   },
+//   (error) => {
+//     console.error("An error occurred while loading the GLTF file:", error);
+//   }
+// );
 
 const loader = new GLTFLoader();
+const textureLoader = new THREE.TextureLoader(); // Texture loader for loading textures
+
+// Preload all textures based on indices provided
+const textures = [
+  textureLoader.load('./textures/body_baseColor.png'), // index 0
+  textureLoader.load('./textures/body_metallicRoughness.png'), // index 1
+  textureLoader.load('./textures/body_normal.png'), // index 2
+
+  textureLoader.load('./textures/Fin_down_baseColor.png'), // index 3
+  textureLoader.load('./textures/Fin_down_metallicRoughness.png'), // index 4
+  textureLoader.load('./textures/Fin_down_normal.png'), // index 5
+
+  textureLoader.load('./textures/fin_back_baseColor.png'), // index 6
+  textureLoader.load('./textures/fin_back_metallicRoughness.png'), // index 7
+  textureLoader.load('./textures/fin_back_nomral.png'), // index 8
+
+  textureLoader.load('./textures/fin_top_baseColor.png'), // index 9
+  textureLoader.load('./textures/fin_top_metallicRoughness.png'), // index 10
+  textureLoader.load('./textures/fin_top_normal.png'), // index 11
+
+  textureLoader.load('./textures/eyes_baseColor.png'), // index 12
+  textureLoader.load('./textures/eyes_metallicRoughness.png'), // index 13
+];
+
 loader.load(
   './red_betta_fish/scene.gltf',
   (gltf) => {
@@ -434,13 +587,53 @@ loader.load(
     console.log("GLTF Loaded:", fish);
 
     // Scale and position adjustments
-    fish.scale.set(0.0008, 0.0008, 0.0008); // Adjust based on the model's size
-    fish.position.set(0, 0, 0); // Set to origin for visibility
+    fish.scale.set(0.0008, 0.0008, 0.0008);
+    fish.position.set(0, 0, 0);
 
-    // Replace material for testing
+    // Traverse and apply textures based on the materials' names
     fish.traverse((node) => {
       if (node.isMesh) {
-        node.material = new THREE.MeshBasicMaterial({ color: 0xff0000 });
+        const material = new THREE.MeshStandardMaterial();
+
+        // Check the mesh name and apply the appropriate material settings
+        // Apply materials and textures correctly
+if (node.name === 'body') {
+  material.map = textures[0]; // baseColorTexture (color map)
+  material.normalMap = textures[2]; // normalTexture
+  material.metalnessMap = textures[1]; // metallicRoughnessTexture (metallic map)
+  material.roughnessMap = textures[1]; // metallicRoughnessTexture (roughness map)
+  material.metalness = 0.0; // If specific values are required
+  material.roughness = 1.0; // Set roughness factor as well (if necessary)
+} else if (node.name === 'Fin_down') {
+  material.map = textures[3]; // baseColorTexture
+  material.normalMap = textures[5]; // normalTexture
+  material.metalnessMap = textures[4]; // metallicRoughnessTexture
+  material.roughnessMap = textures[4]; // metallicRoughnessTexture
+  material.alphaMode = 'BLEND';
+} else if (node.name === 'fin_back') {
+  material.map = textures[6]; // baseColorTexture
+  material.normalMap = textures[8]; // normalTexture
+  material.metalnessMap = textures[7]; // metallicRoughnessTexture
+  material.roughnessMap = textures[7]; // metallicRoughnessTexture
+} else if (node.name === 'fin_top') {
+  material.map = textures[9]; // baseColorTexture
+  material.normalMap = textures[11]; // normalTexture
+  material.metalnessMap = textures[10]; // metallicRoughnessTexture
+  material.roughnessMap = textures[10]; // metallicRoughnessTexture
+} else if (node.name === 'eyes') {
+  material.map = textures[12]; // baseColorTexture
+  material.metalnessMap = textures[13]; // metallicRoughnessTexture
+  material.roughnessMap = textures[13]; // roughnessTexture
+}
+
+
+        // Apply double-sided property if needed
+        if (node.name === 'Fin_down' || node.name === 'fin_top') {
+          material.side = THREE.DoubleSide;
+        }
+
+        // Assign the material to the mesh
+        node.material = material;
       }
     });
 
@@ -450,6 +643,14 @@ loader.load(
 
     console.log("Fish added to scene:", fish.position);
 
+    // Compute fish's bounding box
+    const boundingBox = new THREE.Box3().setFromObject(fish);
+    const fishDimensions = new THREE.Vector3();
+    boundingBox.getSize(fishDimensions);
+
+    // Calculate the radius buffer (distance from the center to the furthest part of the fish)
+    const fishRadiusBuffer = fishDimensions.length() / 2;
+
     // Initial fish position and direction
     let fishPosition = new THREE.Vector3(0.3, 0.2, 0.1); // Start near the center of the sphere
     let fishDirection = new THREE.Vector3(Math.random(), Math.random(), Math.random()).normalize(); // Random initial direction
@@ -458,24 +659,26 @@ loader.load(
     function getRandomSpeed(min, max) {
       return Math.random() * (max - min) + min; // Random speed between min and max
     }
-    let fishSpeed = getRandomSpeed(0.001, 0.0020); // Slower speed between 0.001 and 0.0020
+    let fishSpeed = getRandomSpeed(0.0001, 0.0020); // Slower speed between 0.001 and 0.0020
 
     // Time tracking for direction changes
     let changeDirectionCounter = 0;
     const changeDirectionInterval = 300; // Increase the interval to change direction every 300 frames
 
-    // Ensure the fish stays inside the 0.8-radius sphere and the top hemisphere
-    function keepInsideTopHalfSphere(position, maxRadius) {
+    // Ensure the fish stays inside the 0.9-radius sphere (accounting for its size)
+    function keepInsideSphere(position, maxRadius, buffer) {
       // If the fish moves outside the sphere, reflect its position back inside
-      if (position.length() > maxRadius) {
-        position.normalize().multiplyScalar(maxRadius - 0.1); // Move it slightly inside
+      if (position.length() + buffer > maxRadius) {
+        position.normalize().multiplyScalar(maxRadius - buffer - 0.01); // Slightly inside
         // Reverse direction to prevent immediately leaving again
         fishDirection.reflect(position.clone().normalize());
       }
+    }
 
-      // Ensure the fish stays in the top hemisphere (y >= 0)
+    // Ensure the fish stays in the top hemisphere (y >= 0)
+    function keepInTopHemisphere(position) {
       if (position.y < 0) {
-        position.y = Math.abs(position.y); // Reflect it to stay above the equator
+        position.y = Math.abs(position.y); // Reflect to stay above equator
         fishDirection.y = Math.abs(fishDirection.y); // Adjust direction to point upwards
       }
     }
@@ -491,8 +694,11 @@ loader.load(
       // Attempt to move the fish
       const newPosition = fishPosition.clone().add(fishDirection.clone().multiplyScalar(fishSpeed));
 
-      // Ensure movement stays within the 0.8-radius sphere and top hemisphere
-      keepInsideTopHalfSphere(newPosition, 0.8);
+      // Ensure movement stays within the 0.9-radius sphere
+      keepInsideSphere(newPosition, 0.9, fishRadiusBuffer);
+
+      // Ensure the fish stays in the top hemisphere
+      keepInTopHemisphere(newPosition);
 
       // Update fish's position
       fishPosition.copy(newPosition);
@@ -509,6 +715,14 @@ loader.load(
 
       // Update the fish's position in the scene
       fish.position.copy(fishPosition);
+
+      // Point the fish in the direction it's moving
+      const targetQuaternion = new THREE.Quaternion();
+      targetQuaternion.setFromUnitVectors(
+        new THREE.Vector3(0, 0, 1), // Default forward direction
+        fishDirection.clone().normalize() // Fish's movement direction
+      );
+      fish.quaternion.copy(targetQuaternion);
     }
 
     // Animation loop to update fish movement
@@ -517,7 +731,7 @@ loader.load(
 
       // Update the fish's movement
       updateFish();
-
+      updateMovement();
       // Render the scene
       renderer.render(scene, camera);
     }
@@ -532,5 +746,3 @@ loader.load(
     console.error("An error occurred while loading the GLTF file:", error);
   }
 );
-
-animate();
