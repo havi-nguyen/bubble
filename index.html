@@ -13,3 +13,76 @@
     <script type="module" src="/main.js"></script>
   </body>
 </html>
+
+<!-- <!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Fish Color Slider</title>
+    <style>
+        /* General styles */
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+
+        /* Slider container styling */
+        .slider-container {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            z-index: 10;
+        }
+
+        .slider {
+            -webkit-appearance: none;
+            width: 200px;
+            height: 8px;
+            border-radius: 5px;
+            background: linear-gradient(to right, red, orange, yellow, green, cyan, blue, violet);
+            outline: none;
+            opacity: 0.8;
+            transition: opacity 0.2s;
+            cursor: pointer;
+        }
+
+        .slider:hover {
+            opacity: 1;
+        }
+    </style>
+</head>
+<body> -->
+    <!-- Slider for changing fish color -->
+    <!-- <div class="slider-container">
+        <input type="range" id="colorSlider" min="0" max="360" value="180" class="slider">
+    </div> -->
+
+    <!-- Import your Three.js and main.js script -->
+    <!-- <script type="module" src="/main.js"></script>
+
+    <script>
+        // Wait for the GLTF fish to be loaded (defined in your main.js script)
+        let fishMaterial; // Reference to the fish's material
+
+        const colorSlider = document.getElementById("colorSlider");
+
+        // Listen for the slider's input event to update fish color dynamically
+        colorSlider.addEventListener("input", () => {
+            const hue = colorSlider.value; // Get current slider value
+            const newColor = new THREE.Color(`hsl(${hue}, 100%, 50%)`);
+            if (fishMaterial) {
+                fishMaterial.color = newColor; // Update fish material color
+            }
+        });
+
+        // Hook into your fish creation logic
+        window.addEventListener("DOMContentLoaded", () => {
+            window.fishReadyCallback = (material) => {
+                fishMaterial = material; // Save the material reference
+            };
+        });
+    </script>
+</body>
+</html> -->
+

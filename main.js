@@ -19,7 +19,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Initial Camera Position
-let radius = 5; // Distance from the bubble
+let radius = 3; // Distance from the bubble
 let theta = 0; // Horizontal angle (rotation around Y-axis)
 let phi = Math.PI / 4; // Vertical angle (rotation from Y-axis)
 camera.position.set(
@@ -74,8 +74,8 @@ document.addEventListener("keyup", (event) => {
 });
 
 // Movement update logic
-const moveSpeed = 0.05; // Speed for rotating
-const zoomSpeed = 0.1; // Speed for zooming in/out
+const moveSpeed = 0.01; // Speed for rotating
+const zoomSpeed = 0.01; // Speed for zooming in/out
 function updateMovement() {
   // Horizontal rotation (A/D keys)
   theta += movement.sideways * moveSpeed;
@@ -88,7 +88,6 @@ function updateMovement() {
 
   // Zoom in/out (W/S keys)
   radius += movement.forward * zoomSpeed; // Inverted direction
-  radius = Math.max(2, radius); // Prevent camera from going inside the bubble
 
   // Update camera position
   camera.position.set(
@@ -471,8 +470,8 @@ loader.load(
     // Scale and position adjustments
     fish.scale.set(0.0008, 0.0008, 0.0008);
     fish.position.set(0, 0, 0);
-
-    // Traverse and apply textures based on the materials' names
+    let fishMaterial;
+    // Traverse and awpply textures based on the materials' names
     fish.traverse((node) => {
       if (node.isMesh) {
         const material = new THREE.MeshStandardMaterial({
@@ -496,6 +495,7 @@ loader.load(
     // Add fish to the scene
     scene.add(fish);
     window.fish = fish;
+    
 
     console.log("Fish added to scene:", fish.position);
 
