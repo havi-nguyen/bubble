@@ -19,7 +19,7 @@ renderer.setSize(window.innerWidth, window.innerHeight);
 document.body.appendChild(renderer.domElement);
 
 // Initial Camera Position
-let radius = 3; // Distance from the bubble
+let radius = 5; // Distance from the bubble
 let theta = 0; // Horizontal angle (rotation around Y-axis)
 let phi = Math.PI / 4; // Vertical angle (rotation from Y-axis)
 camera.position.set(
@@ -74,8 +74,8 @@ document.addEventListener("keyup", (event) => {
 });
 
 // Movement update logic
-const moveSpeed = 0.01; // Speed for rotating
-const zoomSpeed = 0.01; // Speed for zooming in/out
+const moveSpeed = 0.02; // Speed for rotating
+const zoomSpeed = 0.05; // Speed for zooming in/out
 function updateMovement() {
   // Horizontal rotation (A/D keys)
   theta += movement.sideways * moveSpeed;
@@ -105,6 +105,17 @@ window.addEventListener("resize", () => {
   camera.aspect = window.innerWidth / window.innerHeight;
   camera.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
+});
+
+const listener = new THREE.AudioListener();
+camera.add(listener);
+const sound = new THREE.Audio(listener);
+const audioLoader = new THREE.AudioLoader();
+audioLoader.load("ambient.ogg", function (buffer) {
+  sound.setBuffer(buffer);
+  sound.setLoop(true);
+  sound.setVolume(0.5);
+  sound.play();
 });
 
 /****************************************************************************
@@ -429,6 +440,129 @@ function updateParticles() {
   }
 }
 
+const loaders = new GLTFLoader();
+
+loaders.load(
+  "seaweed.glb",
+  function (gltf) {
+    const seaweed = gltf.scene;
+
+    seaweed.scale.set(0.5, 0.5, 0.5);
+    seaweed.position.set(-0.5, 0.05, 0.0);
+    scene.add(seaweed);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "seaweed.glb",
+  function (gltf) {
+    const sea = gltf.scene;
+
+    sea.scale.set(0.5, 0.5, 0.5);
+    sea.position.set(-0.5, 0.1, 0.0);
+    sea.rotateX(45);
+    scene.add(sea);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "rock.glb",
+  function (gltf) {
+    const rock = gltf.scene;
+
+    rock.scale.set(0.7, 0.7, 0.7);
+    rock.position.set(0.5, 0.1, 0.0);
+    scene.add(rock);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "white.glb",
+  function (gltf) {
+    const white = gltf.scene;
+
+    white.scale.set(0.01, 0.01, 0.01);
+    white.position.set(-0.1, 0.0, 0.6);
+    scene.add(white);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "coral.glb",
+  function (gltf) {
+    const coral = gltf.scene;
+
+    coral.scale.set(0.04, 0.04, 0.04);
+    coral.position.set(-0.5, 0.0, 0.0);
+    scene.add(coral);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "purple_coral.glb",
+  function (gltf) {
+    const corals = gltf.scene;
+
+    corals.scale.set(0.05, 0.05, 0.05);
+    corals.position.set(-0.3, 0.002, -0.5);
+    scene.add(corals);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "cluster.glb",
+  function (gltf) {
+    const cluster = gltf.scene;
+
+    cluster.scale.set(0.05, 0.05, 0.05);
+    cluster.position.set(0, -0.15, -0.5);
+    scene.add(cluster);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
+loaders.load(
+  "spined.glb",
+  function (gltf) {
+    const purple = gltf.scene;
+
+    purple.scale.set(0.0005, 0.0005, 0.0005);
+    purple.position.set(-0.3, 0.002, -0.2);
+    scene.add(purple);
+  },
+  undefined,
+  function (error) {
+    console.error(error);
+  }
+);
+
 /****************************************************************************
  *
  * Fish / Texture Loading
@@ -470,8 +604,8 @@ loader.load(
     // Scale and position adjustments
     fish.scale.set(0.0008, 0.0008, 0.0008);
     fish.position.set(0, 0, 0);
-    let fishMaterial;
-    // Traverse and awpply textures based on the materials' names
+
+    // Traverse and apply textures based on the materials' names
     fish.traverse((node) => {
       if (node.isMesh) {
         const material = new THREE.MeshStandardMaterial({
@@ -495,7 +629,6 @@ loader.load(
     // Add fish to the scene
     scene.add(fish);
     window.fish = fish;
-    
 
     console.log("Fish added to scene:", fish.position);
 
